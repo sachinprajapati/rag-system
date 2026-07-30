@@ -1,49 +1,37 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { uploadDocument } from '../services/api';
 
 const DocumentUpload: React.FC = () => {
     const [file, setFile] = useState<File | null>(null);
     const [uploading, setUploading] = useState(false);
     const [message, setMessage] = useState('');
-
-    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        if (event.target.files && event.target.files.length > 0) {
-            setFile(event.target.files[0]);
-        }
-    };
+    const inputRef = useRef<HTMLInputElement>(null);
 
     const handleUpload = async () => {
-        if (!file) {
-            setMessage('Please select a file to upload.');
-            return;
-        }
-
+        if (!file) return;
         setUploading(true);
         setMessage('');
-
         try {
             const response = await uploadDocument(file);
-            const chunks = response.chunks_processed || 0;
-            setMessage(`File uploaded successfully! Processed ${chunks} chunks.`);
+            setMessage(`${file.name} is ready · ${response.chunks_processed || 0} chunks indexed`);
             setFile(null);
+            if (inputRef.current) inputRef.current.value = '';
         } catch (error: any) {
-            console.error('Upload error:', error);
-            const errorMsg = error.response?.data?.detail || error.message || 'Error uploading file. Please try again.';
-            setMessage(errorMsg);
+            setMessage(error.response?.data?.detail || 'Upload failed. Please try again.');
         } finally {
             setUploading(false);
         }
     };
 
     return (
-        <div>
-            <h2>Upload Document</h2>
-            <input type="file" onChange={handleFileChange} />
-            <button onClick={handleUpload} disabled={uploading}>
-                {uploading ? 'Uploading...' : 'Upload'}
-            </button>
-            {message && <p>{message}</p>}
-        </div>
+        <section className="document-bar">
+            <div className="document-bar-icon">⌁</div>
+            <div className="document-bar-copy"><strong>Knowledge base</strong><span>{file ? file.name : 'Add documents to ground your answers'}</span></div>
+            <input ref={inputRef} id="document-file" type="file" onChange={(event) => setFile(event.target.files?.[0] || null)} />
+            <label className="upload-picker" htmlFor="document-file">{file ? 'Change file' : 'Upload file'}</label>
+            {file && <button className="upload-action" onClick={handleUpload} disabled={uploading}>{uploading ? 'Indexing…' : 'Add to knowledge base'}</button>}
+            {message && <span className="upload-message">{message}</span>}
+        </section>
     );
 };
 

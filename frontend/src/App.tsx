@@ -16,70 +16,45 @@ const App: React.FC = () => {
     };
 
     return (
-        <div className="App" style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+        <div className="App">
             <header className="app-header">
-                <div>
-                    <h1>RAG System</h1>
-                    <p style={{ color: '#fff', margin: 0 }}>Production-Grade RAG System with RBAC & Conversations</p>
+                <div className="brand">
+                    <div className="brand-mark">✦</div>
+                    <div>
+                        <h1>Askwise</h1>
+                        <p>AI workspace for your documents</p>
+                    </div>
                 </div>
-                <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-                    {/* View Toggle */}
-                    <div style={{ display: 'flex', gap: '5px', backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: '6px', padding: '4px' }}>
+                <div className="header-actions">
+                    <div className="view-toggle">
                         <button
                             onClick={() => setActiveView('rag')}
-                            style={{
-                                padding: '6px 14px',
-                                fontSize: '14px',
-                                backgroundColor: activeView === 'rag' ? '#fff' : 'transparent',
-                                color: activeView === 'rag' ? '#333' : '#fff',
-                                border: 'none',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                fontWeight: activeView === 'rag' ? 'bold' : 'normal'
-                            }}
+                            className={activeView === 'rag' ? 'active' : ''}
                         >
-                            💬 RAG System
+                            Chat
                         </button>
                         <button
                             onClick={() => setActiveView('monitoring')}
-                            style={{
-                                padding: '6px 14px',
-                                fontSize: '14px',
-                                backgroundColor: activeView === 'monitoring' ? '#fff' : 'transparent',
-                                color: activeView === 'monitoring' ? '#333' : '#fff',
-                                border: 'none',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                fontWeight: activeView === 'monitoring' ? 'bold' : 'normal'
-                            }}
+                            className={activeView === 'monitoring' ? 'active' : ''}
                         >
-                            📊 Monitoring
+                            Monitoring
                         </button>
                     </div>
 
                     {activeView === 'rag' && (
                         <button
                             onClick={() => setShowSidebar(!showSidebar)}
-                            style={{
-                                padding: '8px 12px',
-                                fontSize: '14px',
-                                backgroundColor: '#fff',
-                                color: '#333',
-                                border: 'none',
-                                borderRadius: '4px',
-                                cursor: 'pointer'
-                            }}
+                            className="icon-button"
+                            title={showSidebar ? 'Hide conversations' : 'Show conversations'}
                         >
-                            {showSidebar ? '⬅️ Hide' : '➡️ Show'} Conversations
+                            {showSidebar ? '◧' : '▣'}
                         </button>
                     )}
-                    <div style={{ color: 'white', fontSize: '0.9rem' }}>
-                        🔓 Auth: Disabled | RBAC Ready
-                    </div>
+                    <div className="system-status"><span></span> System online</div>
                 </div>
             </header>
             
-            <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+            <div className="workspace">
                 {activeView === 'rag' ? (
                     <>
                         {showSidebar && (
@@ -89,7 +64,7 @@ const App: React.FC = () => {
                             />
                         )}
                         
-                        <main className="app-content" style={{ flex: 1, overflowY: 'auto' }}>
+                        <main className="app-content">
                             <DocumentUpload />
                             <QueryInterface 
                                 activeConversationId={activeConversationId}
@@ -99,7 +74,7 @@ const App: React.FC = () => {
                         </main>
                     </>
                 ) : (
-                    <main className="app-content" style={{ flex: 1, overflowY: 'auto' }}>
+                    <main className="app-content">
                         <MonitoringDashboard />
                     </main>
                 )}
@@ -109,4 +84,3 @@ const App: React.FC = () => {
 };
 
 export default App;
-
