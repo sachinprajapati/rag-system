@@ -64,9 +64,15 @@ export const uploadDocument = async (file: File) => {
 export const queryRAGSystem = async (
     query: string, 
     top_k: number = 5,
-    search_method: 'vector' | 'keyword' | 'hybrid' = 'hybrid'
+    search_method: 'vector' | 'keyword' | 'hybrid' = 'hybrid',
+    conversation_id?: string
 ) => {
-    const response = await apiClient.post('/query', { query, top_k, search_method });
+    const response = await apiClient.post('/query', { 
+        query, 
+        top_k, 
+        search_method,
+        conversation_id 
+    });
     return response.data;
 };
 
@@ -91,5 +97,81 @@ export const getCurrentUser = async () => {
 
 export const getAuthStatus = async () => {
     const response = await apiClient.get('/auth/status');
+    return response.data;
+};
+
+// Conversation endpoints
+export const createConversation = async (title?: string) => {
+    const response = await apiClient.post('/query/conversations', { title });
+    return response.data;
+};
+
+export const listConversations = async (limit: number = 50) => {
+    const response = await apiClient.get('/query/conversations', { params: { limit } });
+    return response.data;
+};
+
+export const getConversation = async (conversationId: string) => {
+    const response = await apiClient.get(`/query/conversations/${conversationId}`);
+    return response.data;
+};
+
+export const updateConversationTitle = async (conversationId: string, title: string) => {
+    const response = await apiClient.put(`/query/conversations/${conversationId}`, { title });
+    return response.data;
+};
+
+export const deleteConversation = async (conversationId: string) => {
+    const response = await apiClient.delete(`/query/conversations/${conversationId}`);
+    return response.data;
+};
+
+export const getChatHistory = async (limit: number = 50) => {
+    const response = await apiClient.get('/query/history', { params: { limit } });
+    return response.data;
+};
+
+export const clearChatHistory = async () => {
+    const response = await apiClient.delete('/query/history');
+    return response.data;
+};
+
+// Monitoring endpoints
+export const getMonitoringMetrics = async () => {
+    const response = await apiClient.get('/monitoring/metrics');
+    return response.data;
+};
+
+export const getMonitoringHealth = async () => {
+    const response = await apiClient.get('/monitoring/health');
+    return response.data;
+};
+
+export const getHallucinations = async (limit: number = 50) => {
+    const response = await apiClient.get('/monitoring/hallucinations', { params: { limit } });
+    return response.data;
+};
+
+export const getErrorStats = async (operation?: string) => {
+    const response = await apiClient.get('/monitoring/errors', { 
+        params: operation ? { operation } : undefined 
+    });
+    return response.data;
+};
+
+export const getLatencyStats = async (operation: string) => {
+    const response = await apiClient.get(`/monitoring/latency/${operation}`);
+    return response.data;
+};
+
+export const getQueryLog = async (queryId: string) => {
+    const response = await apiClient.get(`/monitoring/queries/${queryId}`);
+    return response.data;
+};
+
+export const getUserQueries = async (userId: string, tenantId: string, limit: number = 50) => {
+    const response = await apiClient.get('/monitoring/queries', {
+        params: { user_id: userId, tenant_id: tenantId, limit }
+    });
     return response.data;
 };

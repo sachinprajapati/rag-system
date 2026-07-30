@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { queryRAGSystem } from '../services/api';
+import React, { useState, useEffect } from 'react';
+import { queryRAGSystem, getConversation } from '../services/api';
 import SearchMethodInfo from './SearchMethodInfo';
 
 interface QueryResult {
@@ -12,17 +12,57 @@ interface QueryResult {
         search_method?: string;
     }>;
     sources: string[];
+    conversation_id?: string;
+}
+
+interface Message {
+    message_id: string;
+    conversation_id: string;
+    query: string;
+    answer: string;
+    sources: string[];
+    timestamp: string;
 }
 
 type SearchMethod = 'vector' | 'keyword' | 'hybrid';
 
-const QueryInterface: React.FC = () => {
+interface QueryInterfaceProps {
+    activeConversationId: string | null;
+    onConversationCreated?: (conversationId: string) => void;
+}
+
+const QueryInterface: React.FC<QueryInterfaceProps> = ({ activeConversationId, onConversationCreated }) => {
     const [query, setQuery] = useState('');
     const [result, setResult] = useState<QueryResult | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [searchMethod, setSearchMethod] = useState<SearchMethod>('hybrid');
     const [topK, setTopK] = useState(5);
+    const [conversationHistory, setConversationHistory] = useState<Message[]>([]);
+    const [conversationTitle, setConversationTitle] = useState<string>('');
+
+    // Load conversation history when active conversation changes
+    useEffect(() => {
+        const loadConversation = async () => {
+            if (activeConversationId) {
+                try {
+                    const conv = await getConversation(activeConversationId);
+                    setConversationHistory(conv.messages || []);
+                    setConversationTitle(conv.title);
+                    setResult(null); // Clear current result when switching conversations
+                } catch (err) {
+                    console.error('Failed to load conversation:', err);
+                    setConversationHistory([]);
+                    setConversationTitle('');
+                }
+            } else {
+                setConversationHistory([]);
+                setConversationTitle('');
+                setResult(null);
+            }
+        };
+        loadConversation();
+    }, [activeConversationId]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -33,9 +73,28 @@ const QueryInterface: React.FC = () => {
         setResult(null);
 
         try {
-            const data = await queryRAGSystem(query, topK, searchMethod);
+            const data = await queryRAGSystem(query, topK, searchMethod, activeConversationId || undefined);
             console.log('Query result:', data);
             setResult(data);
+            
+            // If a new conversation was created, notify parent and load its history
+            if (data.conversation_id && !activeConversationId && onConversationCreated) {
+                onConversationCreated(data.conversation_id);
+                // Load the newly created conversation's history
+                try {
+                    const conv = await getConversation(data.conversation_id);
+                    setConversationHistory(conv.messages || []);
+                    setConversationTitle(conv.title);
+                } catch (err) {
+                    console.error('Failed to load new conversation:', err);
+                }
+            } else if (activeConversationId) {
+                // Reload conversation history if we're in an existing conversation
+                const conv = await getConversation(activeConversationId);
+                setConversationHistory(conv.messages || []);
+            }
+            
+            setQuery(''); // Clear input after successful query
         } catch (err: any) {
             console.error('Query error:', err);
             setError(err?.response?.data?.detail || err.message || 'Failed to query');
@@ -46,7 +105,46 @@ const QueryInterface: React.FC = () => {
 
     return (
         <div className="card">
-            <h2>Query the RAG System</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                <h2>{conversationTitle || 'Query the RAG System'}</h2>
+                {activeConversationId && (
+                    <span style={{ fontSize: '12px', color: '#666', backgroundColor: '#e0e0e0', padding: '4px 8px', borderRadius: '4px' }}>
+                        💬 Conversation Active
+                    </span>
+                )}
+            </div>
+            
+            {/* Display conversation history */}
+            {conversationHistory.length > 0 && (
+                <div style={{ 
+                    marginBottom: '20px', 
+                    maxHeight: '300px', 
+                    overflowY: 'auto',
+                    border: '1px solid #ddd',
+                    borderRadius: '5px',
+                    padding: '10px',
+                    backgroundColor: '#fafafa'
+                }}>
+                    <h3 style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#666' }}>Previous Messages:</h3>
+                    {conversationHistory.map((msg, index) => (
+                        <div key={msg.message_id} style={{ 
+                            marginBottom: '15px', 
+                            paddingBottom: '15px', 
+                            borderBottom: index < conversationHistory.length - 1 ? '1px solid #e0e0e0' : 'none' 
+                        }}>
+                            <div style={{ marginBottom: '8px' }}>
+                                <strong style={{ color: '#1976d2' }}>Q:</strong> {msg.query}
+                                <span style={{ fontSize: '10px', color: '#999', marginLeft: '10px' }}>
+                                    {new Date(msg.timestamp).toLocaleString()}
+                                </span>
+                            </div>
+                            <div style={{ paddingLeft: '20px', color: '#555' }}>
+                                <strong style={{ color: '#388e3c' }}>A:</strong> {msg.answer}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
             
             <SearchMethodInfo />
             

@@ -46,6 +46,7 @@ def retrieve_documents(
         return keyword_search(query, k=top_k, tenant_id=tenant_id)
     
     elif search_method == "hybrid":
+        print("Using hybrid search method (vector + keyword)")
         from src.services.hybrid_retrieval import hybrid_search
         return hybrid_search(query, k=top_k, tenant_id=tenant_id)
     

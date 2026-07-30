@@ -37,7 +37,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   useEffect(() => {
     let mounted = true;
-    let initTimeout: NodeJS.Timeout;
+    let initTimeout: ReturnType<typeof setTimeout>;
 
     const initKeycloak = async () => {
       try {

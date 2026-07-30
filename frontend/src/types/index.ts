@@ -36,6 +36,37 @@ export interface RAGQueryResponse {
     retrieved_documents: RetrievedDocument[];
     sources: string[];
     tenant_id?: string;
+    conversation_id?: string;
+}
+
+export interface Message {
+    message_id: string;
+    conversation_id: string;
+    query: string;
+    answer: string;
+    sources: string[];
+    timestamp: string;
+    metadata?: Record<string, any>;
+}
+
+export interface Conversation {
+    conversation_id: string;
+    tenant_id: string;
+    user_id: string;
+    title: string;
+    messages: Message[];
+    created_at: string;
+    updated_at: string;
+    metadata?: Record<string, any>;
+}
+
+export interface ConversationSummary {
+    conversation_id: string;
+    title: string;
+    message_count: number;
+    created_at: string;
+    updated_at: string;
+    last_query?: string;
 }
 
 export interface ProcessingStatus {

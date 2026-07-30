@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from src.api.routes import documents, query, health, auth
+from src.api.routes import documents, query, health, auth, monitoring
 from src.core.config import settings
 from src.core.tenant_isolation import TenantIsolationMiddleware
 
@@ -16,6 +16,8 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://localhost:3001",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:3001",
         "http://localhost:8080",  # Keycloak
     ],
     allow_credentials=True,
@@ -31,6 +33,7 @@ app.include_router(health.router, prefix="/api/health", tags=["health"])
 app.include_router(auth.router, prefix="/api/auth", tags=["authentication"])
 app.include_router(documents.router, prefix="/api/documents", tags=["documents"])
 app.include_router(query.router, prefix="/api/query", tags=["query"])
+app.include_router(monitoring.router, prefix="/api/monitoring", tags=["monitoring"])
 
 @app.get("/")
 async def root():

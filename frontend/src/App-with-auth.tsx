@@ -3,6 +3,8 @@ import Keycloak from 'keycloak-js';
 import DocumentUpload from './components/DocumentUpload';
 import QueryInterface from './components/QueryInterface';
 import ProcessingStatus from './components/ProcessingStatus';
+import Conversations from './components/Conversations';
+import MonitoringDashboard from './components/MonitoringDashboard';
 import { setTokenGetter } from './services/api';
 
 const keycloak = new Keycloak({
@@ -16,6 +18,13 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [username, setUsername] = useState('');
   const [roles, setRoles] = useState<string[]>([]);
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  const [showSidebar, setShowSidebar] = useState(true);
+  const [activeView, setActiveView] = useState<'rag' | 'monitoring'>('rag');
+
+  const handleConversationCreated = (conversationId: string) => {
+    setActiveConversationId(conversationId);
+  };
 
   useEffect(() => {
     keycloak.init({
@@ -65,13 +74,67 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="App">
+    <div className="App" style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
       <header className="app-header">
         <div>
           <h1>RAG System</h1>
-          <p style={{ color: '#fff', margin: 0 }}>Production-Grade RAG System with RBAC</p>
+          <p style={{ color: '#fff', margin: 0 }}>Production-Grade RAG System with RBAC & Conversations</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+          {authenticated && (
+            <>
+              <div style={{ display: 'flex', gap: '8px', backgroundColor: 'rgba(255,255,255,0.1)', padding: '4px', borderRadius: '6px' }}>
+                <button
+                  onClick={() => setActiveView('rag')}
+                  style={{
+                    padding: '8px 12px',
+                    fontSize: '14px',
+                    backgroundColor: activeView === 'rag' ? '#fff' : 'transparent',
+                    color: activeView === 'rag' ? '#333' : '#fff',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontWeight: activeView === 'rag' ? 'bold' : 'normal',
+                  }}
+                >
+                  💬 RAG System
+                </button>
+                {roles.includes('admin') && (
+                  <button
+                    onClick={() => setActiveView('monitoring')}
+                    style={{
+                      padding: '8px 12px',
+                      fontSize: '14px',
+                      backgroundColor: activeView === 'monitoring' ? '#fff' : 'transparent',
+                      color: activeView === 'monitoring' ? '#333' : '#fff',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontWeight: activeView === 'monitoring' ? 'bold' : 'normal',
+                    }}
+                  >
+                    📊 Monitoring
+                  </button>
+                )}
+              </div>
+              {activeView === 'rag' && (
+                <button
+                  onClick={() => setShowSidebar(!showSidebar)}
+                  style={{
+                    padding: '8px 12px',
+                    fontSize: '14px',
+                    backgroundColor: '#fff',
+                    color: '#333',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {showSidebar ? '⬅️ Hide' : '➡️ Show'} Conversations
+                </button>
+              )}
+            </>
+          )}
           {authenticated ? (
             <>
               <div style={{ color: 'white', textAlign: 'right' }}>
@@ -114,22 +177,40 @@ const App: React.FC = () => {
         </div>
       </header>
       
-      <main className="app-content">
-        {authenticated ? (
-          <>
-            <DocumentUpload />
-            <QueryInterface />
-            <ProcessingStatus isProcessing={false} />
-          </>
-        ) : (
-          <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-            <h2>Welcome to RAG System</h2>
-            <p style={{ fontSize: '1.2rem', color: '#666' }}>
-              Please login to upload documents and query the system
-            </p>
-          </div>
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+        {authenticated && showSidebar && activeView === 'rag' && (
+          <Conversations 
+            activeConversationId={activeConversationId}
+            onSelectConversation={setActiveConversationId}
+          />
         )}
-      </main>
+        
+        <main className="app-content" style={{ flex: 1, overflowY: 'auto' }}>
+          {authenticated ? (
+            <>
+              {activeView === 'rag' ? (
+                <>
+                  <DocumentUpload />
+                  <QueryInterface 
+                    activeConversationId={activeConversationId}
+                    onConversationCreated={handleConversationCreated}
+                  />
+                  <ProcessingStatus isProcessing={false} />
+                </>
+              ) : (
+                <MonitoringDashboard />
+              )}
+            </>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+              <h2>Welcome to RAG System</h2>
+              <p style={{ fontSize: '1.2rem', color: '#666' }}>
+                Please login to upload documents and query the system
+              </p>
+            </div>
+          )}
+        </main>
+      </div>
     </div>
   );
 };

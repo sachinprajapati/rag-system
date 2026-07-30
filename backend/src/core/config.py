@@ -16,6 +16,14 @@ class Settings(BaseSettings):
         default="redis://localhost:6379/0",
         description="Redis connection URL"
     )
+    REDIS_HOST: str = Field(
+        default="localhost",
+        description="Redis host"
+    )
+    REDIS_PORT: int = Field(
+        default=6379,
+        description="Redis port"
+    )
     CELERY_BROKER_URL: str = Field(
         default="redis://localhost:6379/0",
         description="Celery broker URL"
@@ -50,6 +58,20 @@ class Settings(BaseSettings):
     # Generation settings
     MAX_TOKENS: int = Field(default=512, description="Max tokens for generation")
     TEMPERATURE: float = Field(default=0.7, description="Temperature for generation")
+
+    # Ollama settings
+    OLLAMA_URL: str = Field(
+        default="http://localhost:11434",
+        description="Ollama API base URL"
+    )
+    OLLAMA_MODEL: str = Field(
+        default="llama3:8b",
+        description="Ollama model name for response generation"
+    )
+    OLLAMA_TIMEOUT: int = Field(
+        default=120,
+        description="Timeout in seconds for Ollama API calls"
+    )
     
     # Keycloak OAuth2/OIDC settings
     KEYCLOAK_URL: str = Field(

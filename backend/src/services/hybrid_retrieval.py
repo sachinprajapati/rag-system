@@ -131,7 +131,9 @@ def hybrid_search(
         List of retrieved documents with hybrid scores
     """
     # 1. Vector search (semantic)
+    print("Performing vector search...", query)
     query_embedding = generate_embedding(query)
+    print("Query embedding generated:", query_embedding.shape)
     vector_distances, vector_indices, vector_metadata = search_faiss(
         query_embedding, k=k*2, tenant_id=tenant_id
     )
@@ -143,6 +145,7 @@ def hybrid_search(
     ]
     
     # 2. Keyword search (BM25)
+    print("Performing keyword search...", query)
     bm25_engine = get_bm25_engine()
     keyword_scores, keyword_indices, keyword_metadata = bm25_engine.search(
         query, k=k*2, tenant_id=tenant_id
@@ -152,6 +155,7 @@ def hybrid_search(
         (float(score), int(idx), meta)
         for score, idx, meta in zip(keyword_scores, keyword_indices, keyword_metadata)
     ]
+    print("Keyword search results:", keyword_results)
     
     # 3. Fusion
     if fusion_method == "rrf":
@@ -172,7 +176,7 @@ def hybrid_search(
             **meta
         }
         results.append(result)
-    
+    print("Hybrid search results:", results)
     return results
 
 
