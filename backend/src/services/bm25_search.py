@@ -21,6 +21,12 @@ class BM25SearchEngine:
     def _build_index(self):
         """Build BM25 index from FAISS documents"""
         manager = get_faiss_manager()
+
+        # A rebuild may follow deletion of the final document. Clear the prior
+        # corpus first so keyword search cannot serve removed chunks.
+        self.bm25 = None
+        self.documents = []
+        self.tokenized_corpus = []
         
         if not manager.documents:
             return

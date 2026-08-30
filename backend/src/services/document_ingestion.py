@@ -2,30 +2,29 @@
 from typing import List, Dict
 from pathlib import Path
 from datetime import datetime
-from src.utils.pdf_parser import parse_pdf
-from src.utils.text_splitter import split_text_with_metadata, estimate_tokens
+from src.utils.document_router import route_and_chunk_document
 from src.services.embeddings import generate_embeddings
 from src.db.faiss_manager import add_embeddings_to_faiss
 from src.services.bm25_search import rebuild_bm25_index
 
 
-def ingest_document(file_path: str, chunk_size: int = 650, chunk_overlap: int = 125, 
-                   tenant_id: str = "default", user_id: str = None) -> Dict:
+def ingest_document(file_path: str, chunk_size: int = 700, chunk_overlap: int = 140,
+                   tenant_id: str = "default", user_id: str = None,
+                   original_file_name: str | None = None) -> Dict:
     """
     Ingest a single document with advanced chunking, deduplication, and normalization.
     
     Features:
-    - Token-based chunking (500-800 tokens per chunk)
-    - Smart overlap (100-150 tokens)
-    - Automatic deduplication
-    - Text normalization
+    - File-aware structural or recursive character chunking
+    - 700-character chunks with 140-character overlap for prose documents
+    - Parent-child table chunks for PDFs with detected tables
     - Rich metadata attachment
     - Tenant isolation
     
     Args:
         file_path: Path to the document
-        chunk_size: Target chunk size in tokens (default: 650, range: 500-800)
-        chunk_overlap: Overlap in tokens (default: 125, range: 100-150)
+        chunk_size: Retained for API compatibility; prose routing uses 700.
+        chunk_overlap: Retained for API compatibility; prose routing uses 140.
         tenant_id: Tenant ID for multi-tenancy (REQUIRED for isolation)
         user_id: User ID who uploaded the document
         
@@ -33,29 +32,23 @@ def ingest_document(file_path: str, chunk_size: int = 650, chunk_overlap: int = 
         Dictionary with ingestion results including tenant_id and chunk statistics
     """
     try:
-        # Parse the PDF
-        text = parse_pdf(file_path)
-        
-        if not text or len(text.strip()) == 0:
-            raise ValueError("No text extracted from document")
+        file_type, chunks_with_metadata, text = route_and_chunk_document(file_path)
         
         # Prepare source metadata
-        file_name = Path(file_path).name
+        file_name = original_file_name or Path(file_path).name
         source_metadata = {
             "file_path": file_path,
             "file_name": file_name,
             "tenant_id": tenant_id,
             "uploaded_by": user_id,
-            "upload_timestamp": datetime.utcnow().isoformat()
+            "upload_timestamp": datetime.utcnow().isoformat(),
+            "file_size_bytes": Path(file_path).stat().st_size,
+            "file_type": file_type,
+            "source_path": file_path,
         }
         
-        # Split into chunks with metadata and deduplication
-        chunks_with_metadata = split_text_with_metadata(
-            text,
-            chunk_size=chunk_size,
-            chunk_overlap=chunk_overlap,
-            source_metadata=source_metadata
-        )
+        for chunk in chunks_with_metadata:
+            chunk.update(source_metadata)
         
         # Extract text for embedding generation
         chunk_texts = [chunk["text"] for chunk in chunks_with_metadata]
@@ -72,6 +65,7 @@ def ingest_document(file_path: str, chunk_size: int = 650, chunk_overlap: int = 
         # Calculate statistics
         total_tokens = sum(chunk["token_count_estimate"] for chunk in chunks_with_metadata)
         avg_chunk_size = total_tokens // len(chunks_with_metadata) if chunks_with_metadata else 0
+        page_numbers = [chunk.get("page_number") for chunk in chunks_with_metadata if chunk.get("page_number")]
         
         return {
             "status": "success",
@@ -80,10 +74,18 @@ def ingest_document(file_path: str, chunk_size: int = 650, chunk_overlap: int = 
             "total_characters": len(text),
             "total_tokens_estimate": total_tokens,
             "avg_chunk_tokens": avg_chunk_size,
-            "chunk_size_config": chunk_size,
-            "chunk_overlap_config": chunk_overlap,
-            "deduplication_enabled": True,
-            "normalization_enabled": True,
+            "chunk_size_config": 700,
+            "chunk_overlap_config": 140,
+            "file_type_detected": file_type,
+            "page_count": max(page_numbers) if page_numbers else None,
+            "file_size_bytes": source_metadata["file_size_bytes"],
+            "chunking_strategy": (
+                "parent_child_tables"
+                if any(chunk["chunking_strategy"] == "parent_child_tables" for chunk in chunks_with_metadata)
+                else chunks_with_metadata[0]["chunking_strategy"] if chunks_with_metadata else "none"
+            ),
+            "deduplication_enabled": False,
+            "normalization_enabled": False,
             "tenant_id": tenant_id
         }
         

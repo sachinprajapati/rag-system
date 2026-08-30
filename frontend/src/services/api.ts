@@ -89,6 +89,16 @@ export const listDocuments = async () => {
     return response.data;
 };
 
+export const deleteDocument = async (fileName: string) => {
+    const response = await apiClient.delete(`/documents/${encodeURIComponent(fileName)}`);
+    return response.data;
+};
+
+export const reindexDocument = async (fileName: string) => {
+    const response = await apiClient.post(`/documents/reindex/${encodeURIComponent(fileName)}`);
+    return response.data;
+};
+
 // Auth endpoints
 export const getCurrentUser = async () => {
     const response = await apiClient.get('/auth/me');

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import DocumentUpload from './components/DocumentUpload';
 import QueryInterface from './components/QueryInterface';
 import ProcessingStatus from './components/ProcessingStatus';
@@ -8,12 +8,34 @@ import MonitoringDashboard from './components/MonitoringDashboard';
 const App: React.FC = () => {
     const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
     const [showSidebar, setShowSidebar] = useState(true);
-    const [activeView, setActiveView] = useState<'rag' | 'monitoring'>('rag');
+    const [activeView, setActiveView] = useState<'rag' | 'documents' | 'monitoring'>('rag');
 
     const handleConversationCreated = (conversationId: string) => {
         // When a new conversation is created from a query, switch to it
         setActiveConversationId(conversationId);
     };
+
+    const closeSidebarOnMobile = () => {
+        if (window.matchMedia('(max-width: 760px)').matches) setShowSidebar(false);
+    };
+
+    const handleConversationSelected = (conversationId: string | null) => {
+        setActiveConversationId(conversationId);
+        closeSidebarOnMobile();
+    };
+
+    useEffect(() => {
+        if (!showSidebar || activeView !== 'rag') return;
+
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape' && window.matchMedia('(max-width: 760px)').matches) {
+                setShowSidebar(false);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [activeView, showSidebar]);
 
     return (
         <div className="App">
@@ -34,6 +56,12 @@ const App: React.FC = () => {
                             Chat
                         </button>
                         <button
+                            onClick={() => setActiveView('documents')}
+                            className={activeView === 'documents' ? 'active' : ''}
+                        >
+                            Documents
+                        </button>
+                        <button
                             onClick={() => setActiveView('monitoring')}
                             className={activeView === 'monitoring' ? 'active' : ''}
                         >
@@ -46,6 +74,9 @@ const App: React.FC = () => {
                             onClick={() => setShowSidebar(!showSidebar)}
                             className="icon-button"
                             title={showSidebar ? 'Hide conversations' : 'Show conversations'}
+                            aria-label={showSidebar ? 'Hide conversations' : 'Show conversations'}
+                            aria-controls="conversation-sidebar"
+                            aria-expanded={showSidebar}
                         >
                             {showSidebar ? '◧' : '▣'}
                         </button>
@@ -58,14 +89,16 @@ const App: React.FC = () => {
                 {activeView === 'rag' ? (
                     <>
                         {showSidebar && (
-                            <Conversations 
-                                activeConversationId={activeConversationId}
-                                onSelectConversation={setActiveConversationId}
-                            />
+                            <>
+                                <button className="sidebar-backdrop" onClick={() => setShowSidebar(false)} aria-label="Close conversations" />
+                                <Conversations
+                                    activeConversationId={activeConversationId}
+                                    onSelectConversation={handleConversationSelected}
+                                />
+                            </>
                         )}
                         
                         <main className="app-content">
-                            <DocumentUpload />
                             <QueryInterface 
                                 activeConversationId={activeConversationId}
                                 onConversationCreated={handleConversationCreated}
@@ -73,6 +106,10 @@ const App: React.FC = () => {
                             <ProcessingStatus isProcessing={false} />
                         </main>
                     </>
+                ) : activeView === 'documents' ? (
+                    <main className="app-content document-library-page">
+                        <DocumentUpload />
+                    </main>
                 ) : (
                     <main className="app-content">
                         <MonitoringDashboard />

@@ -1,11 +1,15 @@
-FROM python:3.9-slim
+FROM ghcr.io/prefix-dev/pixi:0.77.1
 
 WORKDIR /app
 
-COPY requirements.txt .
+# Copy the manifest first so Docker can reuse the dependency layer when only
+# application code changes.
+COPY pyproject.toml ./
 
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pixi install
 
-COPY src/ .
+COPY src ./src
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+EXPOSE 8000
+
+CMD ["pixi", "run", "app"]

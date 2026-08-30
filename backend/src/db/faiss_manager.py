@@ -103,6 +103,43 @@ class FAISSManager:
         """Reset the index"""
         self.index.reset()
         self.documents = []
+
+    def delete_document(self, file_name: str, tenant_id: str) -> int:
+        """Remove every chunk belonging to a document in a tenant.
+
+        ``IndexFlatL2`` does not support deleting arbitrary vector IDs.  To keep
+        the FAISS vectors and their positional metadata aligned, rebuild the
+        index from the chunks that remain after the deletion.
+
+        Returns the number of chunks removed.
+        """
+        matching_indices = [
+            index
+            for index, document in enumerate(self.documents)
+            if document.get("file_name") == file_name
+            and document.get("tenant_id", "default") == tenant_id
+        ]
+
+        if not matching_indices:
+            return 0
+
+        deleted = set(matching_indices)
+        remaining_indices = [
+            index for index in range(len(self.documents)) if index not in deleted
+        ]
+        remaining_documents = [self.documents[index] for index in remaining_indices]
+
+        # Preserve the index dimension rather than relying on the default.
+        rebuilt_index = faiss.IndexFlatL2(self.index.d)
+        if remaining_indices:
+            vectors = np.vstack([
+                self.index.reconstruct(index) for index in remaining_indices
+            ]).astype("float32")
+            rebuilt_index.add(vectors)
+
+        self.index = rebuilt_index
+        self.documents = remaining_documents
+        return len(matching_indices)
     
     def get_document_count(self) -> int:
         """Get number of vectors in index"""
