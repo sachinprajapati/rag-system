@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import DocumentUpload from './components/DocumentUpload';
 import QueryInterface from './components/QueryInterface';
 import ProcessingStatus from './components/ProcessingStatus';
@@ -8,89 +8,97 @@ import MonitoringDashboard from './components/MonitoringDashboard';
 const App: React.FC = () => {
     const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
     const [showSidebar, setShowSidebar] = useState(true);
-    const [activeView, setActiveView] = useState<'rag' | 'monitoring'>('rag');
+    const [activeView, setActiveView] = useState<'rag' | 'documents' | 'monitoring'>('rag');
 
     const handleConversationCreated = (conversationId: string) => {
         // When a new conversation is created from a query, switch to it
         setActiveConversationId(conversationId);
     };
 
+    const closeSidebarOnMobile = () => {
+        if (window.matchMedia('(max-width: 760px)').matches) setShowSidebar(false);
+    };
+
+    const handleConversationSelected = (conversationId: string | null) => {
+        setActiveConversationId(conversationId);
+        closeSidebarOnMobile();
+    };
+
+    useEffect(() => {
+        if (!showSidebar || activeView !== 'rag') return;
+
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape' && window.matchMedia('(max-width: 760px)').matches) {
+                setShowSidebar(false);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [activeView, showSidebar]);
+
     return (
-        <div className="App" style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+        <div className="App">
             <header className="app-header">
-                <div>
-                    <h1>RAG System</h1>
-                    <p style={{ color: '#fff', margin: 0 }}>Production-Grade RAG System with RBAC & Conversations</p>
+                <div className="brand">
+                    <div className="brand-mark">✦</div>
+                    <div>
+                        <h1>Askwise</h1>
+                        <p>AI workspace for your documents</p>
+                    </div>
                 </div>
-                <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-                    {/* View Toggle */}
-                    <div style={{ display: 'flex', gap: '5px', backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: '6px', padding: '4px' }}>
+                <div className="header-actions">
+                    <div className="view-toggle">
                         <button
                             onClick={() => setActiveView('rag')}
-                            style={{
-                                padding: '6px 14px',
-                                fontSize: '14px',
-                                backgroundColor: activeView === 'rag' ? '#fff' : 'transparent',
-                                color: activeView === 'rag' ? '#333' : '#fff',
-                                border: 'none',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                fontWeight: activeView === 'rag' ? 'bold' : 'normal'
-                            }}
+                            className={activeView === 'rag' ? 'active' : ''}
                         >
-                            💬 RAG System
+                            Chat
+                        </button>
+                        <button
+                            onClick={() => setActiveView('documents')}
+                            className={activeView === 'documents' ? 'active' : ''}
+                        >
+                            Documents
                         </button>
                         <button
                             onClick={() => setActiveView('monitoring')}
-                            style={{
-                                padding: '6px 14px',
-                                fontSize: '14px',
-                                backgroundColor: activeView === 'monitoring' ? '#fff' : 'transparent',
-                                color: activeView === 'monitoring' ? '#333' : '#fff',
-                                border: 'none',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                fontWeight: activeView === 'monitoring' ? 'bold' : 'normal'
-                            }}
+                            className={activeView === 'monitoring' ? 'active' : ''}
                         >
-                            📊 Monitoring
+                            Monitoring
                         </button>
                     </div>
 
                     {activeView === 'rag' && (
                         <button
                             onClick={() => setShowSidebar(!showSidebar)}
-                            style={{
-                                padding: '8px 12px',
-                                fontSize: '14px',
-                                backgroundColor: '#fff',
-                                color: '#333',
-                                border: 'none',
-                                borderRadius: '4px',
-                                cursor: 'pointer'
-                            }}
+                            className="icon-button"
+                            title={showSidebar ? 'Hide conversations' : 'Show conversations'}
+                            aria-label={showSidebar ? 'Hide conversations' : 'Show conversations'}
+                            aria-controls="conversation-sidebar"
+                            aria-expanded={showSidebar}
                         >
-                            {showSidebar ? '⬅️ Hide' : '➡️ Show'} Conversations
+                            {showSidebar ? '◧' : '▣'}
                         </button>
                     )}
-                    <div style={{ color: 'white', fontSize: '0.9rem' }}>
-                        🔓 Auth: Disabled | RBAC Ready
-                    </div>
+                    <div className="system-status"><span></span> System online</div>
                 </div>
             </header>
             
-            <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+            <div className="workspace">
                 {activeView === 'rag' ? (
                     <>
                         {showSidebar && (
-                            <Conversations 
-                                activeConversationId={activeConversationId}
-                                onSelectConversation={setActiveConversationId}
-                            />
+                            <>
+                                <button className="sidebar-backdrop" onClick={() => setShowSidebar(false)} aria-label="Close conversations" />
+                                <Conversations
+                                    activeConversationId={activeConversationId}
+                                    onSelectConversation={handleConversationSelected}
+                                />
+                            </>
                         )}
                         
-                        <main className="app-content" style={{ flex: 1, overflowY: 'auto' }}>
-                            <DocumentUpload />
+                        <main className="app-content">
                             <QueryInterface 
                                 activeConversationId={activeConversationId}
                                 onConversationCreated={handleConversationCreated}
@@ -98,8 +106,12 @@ const App: React.FC = () => {
                             <ProcessingStatus isProcessing={false} />
                         </main>
                     </>
+                ) : activeView === 'documents' ? (
+                    <main className="app-content document-library-page">
+                        <DocumentUpload />
+                    </main>
                 ) : (
-                    <main className="app-content" style={{ flex: 1, overflowY: 'auto' }}>
+                    <main className="app-content">
                         <MonitoringDashboard />
                     </main>
                 )}
@@ -109,4 +121,3 @@ const App: React.FC = () => {
 };
 
 export default App;
-

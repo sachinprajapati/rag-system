@@ -50,6 +50,22 @@ class Settings(BaseSettings):
         default="sentence-transformers/all-MiniLM-L6-v2",
         description="HuggingFace model for embeddings"
     )
+
+    # Retrieval reranking settings.  The cross-encoder is loaded lazily so it
+    # does not increase startup time or affect deployments that disable it.
+    RERANKER_ENABLED: bool = Field(
+        default=True,
+        description="Rerank hybrid-retrieval candidates with a cross-encoder"
+    )
+    RERANKER_MODEL: str = Field(
+        default="cross-encoder/ms-marco-MiniLM-L6-v2",
+        description="HuggingFace cross-encoder model used for reranking"
+    )
+    RERANKER_CANDIDATE_COUNT: int = Field(
+        default=20,
+        ge=1,
+        description="Maximum fused candidates scored by the reranker"
+    )
     
     # Text splitter settings
     CHUNK_SIZE: int = Field(default=512, description="Text chunk size")
@@ -65,7 +81,7 @@ class Settings(BaseSettings):
         description="Ollama API base URL"
     )
     OLLAMA_MODEL: str = Field(
-        default="llama3:8b",
+        default="llama3.2:1b",
         description="Ollama model name for response generation"
     )
     OLLAMA_TIMEOUT: int = Field(

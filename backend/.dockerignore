@@ -1,0 +1,9 @@
+.git
+.venv
+.pixi
+.pytest_cache
+__pycache__
+*.py[cod]
+faiss_index
+logs
+.env

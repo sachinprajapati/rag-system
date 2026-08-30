@@ -1,12 +1,14 @@
-FROM node:16
+FROM ghcr.io/prefix-dev/pixi:0.77.1
 
 WORKDIR /app
 
-COPY package.json ./
-COPY package-lock.json ./
+# Keep Node.js and npm inside the Pixi environment.
+COPY pixi.toml package.json package-lock.json ./
 
-RUN npm install
+RUN pixi run install
 
 COPY . .
 
-CMD ["npm", "run", "dev"]
+EXPOSE 3000
+
+CMD ["pixi", "run", "app"]

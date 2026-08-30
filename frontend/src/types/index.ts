@@ -24,9 +24,14 @@ export interface RetrievedDocument {
     text: string;
     file_name: string;
     score: number;
+    retrieval_score?: number;
+    reranked?: boolean;
     rank?: number;
     search_method?: string;
     chunk_index?: number;
+    page_number?: number;
+    row_number?: number;
+    chunk_role?: string;
     tenant_id?: string;
 }
 
@@ -46,7 +51,11 @@ export interface Message {
     answer: string;
     sources: string[];
     timestamp: string;
-    metadata?: Record<string, any>;
+    metadata?: {
+        table?: { title: string; columns: string[]; rows: string[][] };
+        citation_documents?: RetrievedDocument[];
+        [key: string]: any;
+    };
 }
 
 export interface Conversation {

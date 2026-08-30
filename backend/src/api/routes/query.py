@@ -28,6 +28,7 @@ class QueryResponse(BaseModel):
     sources: List[str]
     tenant_id: Optional[str] = None
     conversation_id: Optional[str] = None  # Include conversation ID in response
+    table: Optional[Dict] = None
 
 
 @router.post("", response_model=QueryResponse)
@@ -110,7 +111,21 @@ async def query_rag_system(
                 search_method=request.search_method,
                 metadata={
                     "top_k": request.top_k,
-                    "retrieved_docs_count": len(result["retrieved_documents"])
+                    "retrieved_docs_count": len(result["retrieved_documents"]),
+                    "table": result.get("table"),
+                    # Preserve the exact passages used for the answer so a
+                    # reopened conversation can still show a citation preview.
+                    "citation_documents": [
+                        {
+                            key: document[key]
+                            for key in (
+                                "file_name", "text", "score", "rank", "search_method",
+                                "chunk_index", "page_number", "row_number", "chunk_role",
+                            )
+                            if key in document
+                        }
+                        for document in result["retrieved_documents"]
+                    ],
                 }
             )
             # Include conversation_id in response

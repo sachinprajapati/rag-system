@@ -4,6 +4,8 @@ import numpy as np
 from src.services.embeddings import generate_embedding
 from src.db.faiss_manager import search_faiss
 from src.services.bm25_search import get_bm25_engine
+from src.core.config import settings
+from src.services.reranking import rerank_documents
 
 
 def reciprocal_rank_fusion(
@@ -130,12 +132,16 @@ def hybrid_search(
     Returns:
         List of retrieved documents with hybrid scores
     """
+    # Fetch a wider candidate set than the final response window.  Fusion is a
+    # high-recall first pass; the cross-encoder below is the precision pass.
+    candidate_k = max(k * 2, settings.RERANKER_CANDIDATE_COUNT)
+
     # 1. Vector search (semantic)
     print("Performing vector search...", query)
     query_embedding = generate_embedding(query)
     print("Query embedding generated:", query_embedding.shape)
     vector_distances, vector_indices, vector_metadata = search_faiss(
-        query_embedding, k=k*2, tenant_id=tenant_id
+        query_embedding, k=candidate_k, tenant_id=tenant_id
     )
     
     # Convert distances to similarity scores (higher is better)
@@ -148,7 +154,7 @@ def hybrid_search(
     print("Performing keyword search...", query)
     bm25_engine = get_bm25_engine()
     keyword_scores, keyword_indices, keyword_metadata = bm25_engine.search(
-        query, k=k*2, tenant_id=tenant_id
+        query, k=candidate_k, tenant_id=tenant_id
     )
     
     keyword_results = [
@@ -166,9 +172,11 @@ def hybrid_search(
             vector_weight, keyword_weight
         )
     
-    # 4. Format results
+    # 4. Format fused candidates, then rerank the top candidates jointly with
+    # the query.  If the local model cannot be loaded, rerank_documents keeps
+    # this fused order unchanged.
     results = []
-    for i, (score, idx, meta) in enumerate(fused_results[:k], 1):
+    for i, (score, idx, meta) in enumerate(fused_results[:candidate_k], 1):
         result = {
             "rank": i,
             "score": float(score),
@@ -176,6 +184,7 @@ def hybrid_search(
             **meta
         }
         results.append(result)
+    results = rerank_documents(query, results, top_k=k)
     print("Hybrid search results:", results)
     return results
 
