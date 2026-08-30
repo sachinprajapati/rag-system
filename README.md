@@ -37,25 +37,25 @@ Which orders have an amount greater than 10,000?
 
 ```mermaid
 flowchart LR
-    U[User] --> UI[React + TypeScript<br/>Vite workspace]
-    UI --> API[FastAPI API]
-    UI -. optional login .-> KC[Keycloak<br/>OIDC / JWT]
+    U["User"] --> UI["React + TypeScript<br/>Vite workspace"]
+    UI --> API["FastAPI API"]
+    UI -. "optional login" .-> KC["Keycloak<br/>OIDC / JWT"]
 
-    API --> ING[Ingestion pipeline]
-    ING --> PARSE[Format-aware parsing<br/>and chunking]
-    PARSE --> EMB[SentenceTransformer<br/>embeddings]
+    API --> ING["Ingestion pipeline"]
+    ING --> PARSE["Format-aware parsing<br/>and chunking"]
+    PARSE --> EMB["SentenceTransformer<br/>embeddings"]
     EMB --> VDB[(FAISS)]
-    PARSE --> KWS[BM25 index]
+    PARSE --> KWS["BM25 index"]
 
-    API --> RET[Retrieval orchestration]
+    API --> RET["Retrieval orchestration"]
     RET --> VDB
     RET --> KWS
-    RET --> RR[Cross-encoder<br/>reranker]
-    RET --> OLL[Ollama<br/>local LLM]
+    RET --> RR["Cross-encoder<br/>reranker"]
+    RET --> OLL["Ollama<br/>local LLM"]
 
     API --> REDIS[(Redis)]
-    REDIS --> STATE[Conversations & history]
-    REDIS --> OBS[Monitoring events]
+    REDIS --> STATE["Conversations & history"]
+    REDIS --> OBS["Monitoring events"]
 ```
 
 ### Retrieval lifecycle
